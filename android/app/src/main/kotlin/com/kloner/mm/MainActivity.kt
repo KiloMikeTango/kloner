@@ -1,4 +1,4 @@
-package com.example.kloner
+package com.kloner.mm
 
 import io.flutter.embedding.android.FlutterActivity
 
