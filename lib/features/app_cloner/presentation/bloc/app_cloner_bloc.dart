@@ -33,23 +33,46 @@ class AppClonerBloc extends Bloc<AppClonerEvent, AppClonerState> {
   }
 
   Future<void> _onCloneApp(CloneAppEvent event, Emitter<AppClonerState> emit) async {
-    if (state is AppClonerLoaded) {
-      final currentState = state as AppClonerLoaded;
-      emit(currentState.copyWith(isCloning: true));
+  if (state is AppClonerLoaded) {
+    final currentState = state as AppClonerLoaded;
+    final packageName = event.packageName;
+    
+    // ✅ PREVENT DUPLICATES
+    if (currentState.clonedApps.contains(packageName)) {
+      emit(currentState.copyWith(error: 'Already cloned!'));
+      return;
+    }
+
+    // ✅ Set PER-APP cloning state
+    final newCloningApps = Map<String, bool>.from(currentState.cloningApps);
+    newCloningApps[packageName] = true;
+    
+    emit(currentState.copyWith(cloningApps: newCloningApps));
+
+    try {
+      // ✅ 3 second simulation (replace with real cloneApp later)
+      await Future.delayed(const Duration(seconds: 3));
       
-      final result = await cloneApp(event.packageName);
-      result.fold(
-        (failure) => emit(currentState.copyWith(
-          isCloning: false,
-          error: _mapFailureToMessage(failure),
-        )),
-        (_) => emit(currentState.copyWith(
-          isCloning: false,
-          clonedApps: [...currentState.clonedApps, event.packageName],
-        )),
-      );
+      // ✅ SUCCESS - Add to cloned list
+      final newClonedApps = [...currentState.clonedApps, packageName];
+      newCloningApps[packageName] = false;
+      
+      emit(currentState.copyWith(
+        clonedApps: newClonedApps,
+        cloningApps: newCloningApps,
+      ));
+    } catch (e) {
+      // ✅ ERROR - Reset only this app
+      newCloningApps[packageName] = false;
+      emit(currentState.copyWith(
+        cloningApps: newCloningApps,
+        error: 'Clone failed: $e',
+      ));
     }
   }
+}
+
+
 
   String _mapFailureToMessage(Failure failure) {
     return failure is SecurityFailure 

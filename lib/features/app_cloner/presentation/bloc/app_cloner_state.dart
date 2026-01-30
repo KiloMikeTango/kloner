@@ -17,14 +17,16 @@ class AppClonerLoading extends AppClonerState {
 
 class AppClonerLoaded extends AppClonerState {
   final List<AppEntity> apps;
-  final bool isCloning;
+  final bool isCloning;                    // Global for StatsCard
   final List<String> clonedApps;
-  final String? error;
+  final Map<String, bool> cloningApps;     // Per-app cloning state ✅ NEW
+  final String? error;                     // ✅ FIXED: Added error field
 
   const AppClonerLoaded({
     required this.apps,
     this.isCloning = false,
     this.clonedApps = const [],
+    this.cloningApps = const {},
     this.error,
   });
 
@@ -32,23 +34,24 @@ class AppClonerLoaded extends AppClonerState {
     List<AppEntity>? apps,
     bool? isCloning,
     List<String>? clonedApps,
+    Map<String, bool>? cloningApps,
     String? error,
   }) {
     return AppClonerLoaded(
       apps: apps ?? this.apps,
       isCloning: isCloning ?? this.isCloning,
       clonedApps: clonedApps ?? this.clonedApps,
-      error: error ?? this.error,
+      cloningApps: cloningApps ?? this.cloningApps,
+      error: error ?? this.error,              // ✅ FIXED: Now works
     );
   }
 
   @override
-  List<Object?> get props => [apps, isCloning, clonedApps, error];
+  List<Object?> get props => [apps, isCloning, clonedApps, cloningApps, error];
 }
 
 class AppClonerError extends AppClonerState {
-  final String message;  // ✅ FIXED: Added message field
-  
+  final String message;
   const AppClonerError(this.message);
 
   @override
