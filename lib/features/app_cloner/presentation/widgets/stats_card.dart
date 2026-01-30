@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:kloner/features/app_cloner/presentation/bloc/app_cloner_bloc.dart';
+import '../bloc/app_cloner_bloc.dart';  // ✅ FIXED: Relative import
 
 class StatsCard extends StatelessWidget {
   const StatsCard({Key? key}) : super(key: key);
@@ -11,7 +11,7 @@ class StatsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<AppClonerBloc, AppClonerState>(
       builder: (context, state) {
-        // ✅ Safe state casting
+        // ✅ Safe state casting - handles ALL states
         final totalApps = state is AppClonerLoaded ? state.apps.length : 0;
         final clonedCount = state is AppClonerLoaded ? state.clonedApps.length : 0;
         final isCloning = state is AppClonerLoaded ? state.isCloning : false;
@@ -99,7 +99,7 @@ class StatsCard extends StatelessWidget {
     );
   }
 
-  // ✅ MISSING _statCard METHOD IMPLEMENTED
+  // ✅ _statCard METHOD - FULLY IMPLEMENTED
   Widget _statCard({
     required String title,
     required int count,
@@ -114,6 +114,7 @@ class StatsCard extends StatelessWidget {
         border: Border.all(color: Colors.white.withOpacity(0.3)),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             icon,

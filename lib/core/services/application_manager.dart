@@ -9,35 +9,35 @@ class ApplicationManager {
   factory ApplicationManager() => _instance;
   ApplicationManager._internal();
 
- Future<List<AppEntity>> getInstalledApplications() async {
-  await Future.delayed(const Duration(milliseconds: 300));
-  
-  try {
-    final List<AppInfo>? apps = await InstalledApps.getInstalledApps(
-      excludeSystemApps: false,
-      withIcon: true,
-    );
+  Future<List<AppEntity>> getInstalledApplications() async {
+    await Future.delayed(const Duration(milliseconds: 300));
     
-    if (apps != null && apps.isNotEmpty) {
-      return apps
-          .where((appInfo) => appInfo.packageName != null)
-          .take(30)  
-          .map((appInfo) => AppEntity(
-                packageName: appInfo.packageName,
-                appName: appInfo.name ,
-                icon: appInfo.icon,
-                version: appInfo.versionName ,
-                isSystemApp: appInfo.isSystemApp,
-              ))
-          .where((app) => !app.packageName.contains('kloner'))
-          .toList();
+    try {
+      final List<AppInfo>? apps = await InstalledApps.getInstalledApps(
+        excludeSystemApps: false,
+        withIcon: true,
+      );
+      
+      if (apps != null && apps.isNotEmpty) {
+        return apps
+            .where((appInfo) => appInfo.packageName != null)
+            .take(30)
+            .map((appInfo) => AppEntity(
+                  packageName: appInfo.packageName ?? 'unknown',
+                  appName: appInfo.name ?? 'Unknown App',
+                  icon: appInfo.icon,
+                  version: appInfo.versionName ?? '1.0.0',     // ✅ NULL-SAFE
+                  isSystemApp: appInfo.isSystemApp ?? false,   // ✅ NULL-SAFE
+                ))
+            .where((app) => !app.packageName.contains('kloner'))
+            .toList();
+      }
+    } catch (e) {
+      debugPrint('📱 AppManager: Using demo apps ($e)');
     }
-  } catch (e) {
-    debugPrint('📱 AppManager: Using demo apps ($e)');
+    
+    return _getDemoApps();
   }
-  
-  return _getDemoApps();
-}
 
   static List<AppEntity> _getDemoApps() {
     return [

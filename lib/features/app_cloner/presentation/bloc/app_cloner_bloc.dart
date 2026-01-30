@@ -1,8 +1,8 @@
 // lib/features/app_cloner/presentation/bloc/app_cloner_bloc.dart
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:kloner/features/app_cloner/domain/usecases/usecase.dart';
-import '../../../../core/errors/failures.dart';
+import 'package:kloner/core/utils/usecase.dart';
+import '../../../../core/errors/failures.dart';  // ✅ FIXED import path
 import '../../domain/entities/app_entity.dart';
 import '../../domain/usecases/clone_app.dart';
 import '../../domain/usecases/get_installed_apps.dart';
@@ -11,7 +11,6 @@ part 'app_cloner_event.dart';
 part 'app_cloner_state.dart';
 
 class AppClonerBloc extends Bloc<AppClonerEvent, AppClonerState> {
- 
   final GetInstalledApps getInstalledApps;
   final CloneApp cloneApp;
 
@@ -34,8 +33,8 @@ class AppClonerBloc extends Bloc<AppClonerEvent, AppClonerState> {
   }
 
   Future<void> _onCloneApp(CloneAppEvent event, Emitter<AppClonerState> emit) async {
-    final currentState = state;
-    if (currentState is AppClonerLoaded) {
+    if (state is AppClonerLoaded) {
+      final currentState = state as AppClonerLoaded;
       emit(currentState.copyWith(isCloning: true));
       
       final result = await cloneApp(event.packageName);
