@@ -1,57 +1,47 @@
-// lib/features/app_cloner/presentation/widgets/app_grid.dart
+// lib/features/app_cloner/widgets/app_grid.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:kloner/features/app_cloner/domain/entities/app_entity.dart';
-import '../bloc/app_cloner_bloc.dart';
+import 'package:kloner/features/app_cloner/presentation/bloc/app_cloner_bloc.dart';
 
 class AppGrid extends StatelessWidget {
-  const AppGrid({Key? key}) : super(key: key);
+  const AppGrid({super.key});
 
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<AppClonerBloc, AppClonerState>(
       builder: (context, state) {
-        // ✅ Show loading skeleton for non-loaded states
-        if (state is AppClonerLoading || state is! AppClonerLoaded) {
-          return GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              childAspectRatio: 0.85,
-              crossAxisSpacing: 12.w,
-              mainAxisSpacing: 12.h,
-            ),
-            itemCount: 6,
-            itemBuilder: (context, index) => _buildSkeletonTile(),
-          );
+        if (state is! AppClonerLoaded) {
+          return Container();
         }
 
-        final apps = state.apps;
-        if (apps.isEmpty) return const SizedBox();
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 4,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 0.85,
+          ),
+          itemCount: state.apps.length,
+          itemBuilder: (context, index) {
+            final app = state.apps[index]; // ✅ Your AppEntity!
 
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            int crossAxisCount = constraints.maxWidth > 600 ? 3 : 2;
-            if (constraints.maxWidth > 900) crossAxisCount = 4;
+            // ✅ SAFE: Both are AppEntity - same structure
+            final isCloned = state.clonedApps.any(
+              (pkgname) => pkgname == app.packageName,
+            );
 
-            return GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: crossAxisCount,
-                childAspectRatio: 0.85,
-                crossAxisSpacing: 12.w,
-                mainAxisSpacing: 12.h,
+            return AppCard(
+              app: app,
+              isCloned: isCloned,
+              isCloning: state.isCloning,
+              onClone: () => context.read<AppClonerBloc>().add(
+                CloneAppEvent(app.packageName),
               ),
-              itemCount: apps.length,
-              itemBuilder: (context, index) {
-                final app = apps[index];
-                final isCloned = state.clonedApps.contains(app.packageName);
-                // ✅ FIXED: Pass full state for per-app cloning
-                return _buildAppTile(context, app, isCloned, state);
-              },
+              onLaunch: () => _launchApp(context, app.packageName),
             );
           },
         );
@@ -59,154 +49,163 @@ class AppGrid extends StatelessWidget {
     );
   }
 
-  Widget _buildSkeletonTile() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.grey[200],
-        borderRadius: BorderRadius.circular(16.r),
-      ),
-      child: Column(
-        children: [
-          Container(width: 48.w, height: 48.h, color: Colors.grey[300]),
-          SizedBox(height: 12.h),
-          Container(width: 80.w, height: 16.h, color: Colors.grey[300]),
-          SizedBox(height: 12.h),
-          Container(
-            width: double.infinity,
-            height: 32.h,
-            color: Colors.grey[300],
-          ),
-        ],
+  void _launchApp(BuildContext context, String packageName) {
+    debugPrint('🚀 Launching: $packageName');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('📱 Launching $packageName'),
+        duration: const Duration(seconds: 2),
       ),
     );
   }
+}
 
-  Widget _buildAppTile(
-    BuildContext context,
-    AppEntity app,
-    bool isCloned,
-    AppClonerState state,
-  ) {
-    // ✅ FIXED: Get per-app cloning state
-    final isCloningThisApp = state is AppClonerLoaded
-        ? state.cloningApps[app.packageName] ?? false
-        : false;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16.r),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10.r),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16.r),
-          onTap: (isCloned || isCloningThisApp)
-              ? null
-              : () => _onCloneTap(context, app.packageName),
-          child: Padding(
-            padding: EdgeInsets.all(16.w),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // ✅ App Icon
-                Container(
-                  width: 48.w,
-                  height: 48.h,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  child: app.icon != null
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(12.r),
-                          child: Image.memory(app.icon!, fit: BoxFit.cover),
-                        )
-                      : Icon(Icons.apps, size: 24.sp, color: Colors.grey[400]),
-                ),
-                SizedBox(height: 12.h),
 
-                // ✅ App Name
-                Expanded(
-                  child: Text(
-                    app.appName,
-                    style: TextStyle(
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
+class AppCard extends StatelessWidget {
+  final AppEntity app;
+  final bool isCloned;
+  final bool isCloning;
+  final VoidCallback onClone;
+  final VoidCallback onLaunch;
 
-                SizedBox(height: 8.h),
+  const AppCard({
+    super.key,
+    required this.app,
+    required this.isCloned,
+    required this.isCloning,
+    required this.onClone,
+    required this.onLaunch,
+  });
 
-                // ✅ PERFECT BUTTON - Individual app states
-                SizedBox(
-                  width: double.infinity,
-                  height: 36.h,
-                  child: ElevatedButton(
-                    onPressed: (isCloned || isCloningThisApp)
-                        ? null
-                        : () => _onCloneTap(context, app.packageName),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isCloned
-                          ? Colors.green.shade500
-                          : isCloningThisApp
-                          ? Colors.orange.shade500
-                          : Colors.blue.shade500,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8.r),
-                      ),
-                      elevation: isCloned ? 0 : 2,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        if (isCloningThisApp)
-                          SizedBox(
-                            width: 16.w,
-                            height: 16.h,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.w,
-                              color: Colors.white,
-                            ),
-                          )
-                        else if (isCloned)
-                          Icon(Icons.check, size: 16.sp)
-                        else
-                          Icon(Icons.copy, size: 16.sp),
-
-                        SizedBox(width: 4.w),
-                        Text(
-                          isCloned
-                              ? 'Cloned'
-                              : isCloningThisApp
-                              ? 'Cloning...'
-                              : 'Clone',
-                          style: TextStyle(
-                            fontSize: 12.sp,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: isCloning ? null : onLaunch,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20.r),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
             ),
-          ),
+          ],
+        ),
+        child: Column(
+          children: [
+            // ✅ REAL App Icon from AppEntity
+            Container(
+              height: 50.h,
+              width: 50.w,
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: BorderRadius.circular(12.r),
+              ),
+              child: app.icon != null
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(12.r),
+                      child: Image.memory(
+                        app.icon!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Icon(
+                          Icons.android,
+                          size: 24.sp,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    )
+                  : Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Colors.blue.shade400, Colors.blue.shade600],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                      child: Icon(
+                        _getAppIcon(app.packageName),
+                        color: Colors.white,
+                        size: 24.sp,
+                      ),
+                    ),
+            ),
+            SizedBox(height: 8.h),
+
+            // ✅ REAL App Name from AppEntity
+            Expanded(
+              child: Text(
+                app.appName.length > 12
+                    ? '${app.appName.substring(0, 12)}...'
+                    : app.appName,
+                style: TextStyle(fontSize: 10.sp, fontWeight: FontWeight.w500),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+
+            // ✅ Clone Button / Status
+            if (!isCloned)
+              Padding(
+                padding: EdgeInsets.all(4.w),
+                child: ElevatedButton(
+                  onPressed: isCloning ? null : onClone,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 8.w,
+                      vertical: 4.h,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8.r),
+                    ),
+                    textStyle: TextStyle(fontSize: 10.sp),
+                  ),
+                  child: isCloning
+                      ? SizedBox(
+                          width: 12.w,
+                          height: 12.h,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: const AlwaysStoppedAnimation(
+                              Colors.white,
+                            ),
+                          ),
+                        )
+                      : const Text('Clone'),
+                ),
+              )
+            else
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 4.h),
+                decoration: BoxDecoration(
+                  color: Colors.green.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+                child: const Icon(
+                  Icons.check_circle,
+                  size: 14,
+                  color: Colors.green,
+                ),
+              ),
+          ],
         ),
       ),
     );
   }
 
-  void _onCloneTap(BuildContext context, String packageName) {
-    context.read<AppClonerBloc>().add(CloneAppEvent(packageName));
+  IconData _getAppIcon(String packageName) {
+    final lower = packageName.toLowerCase();
+    if (lower.contains('whatsapp')) return Icons.message;
+    if (lower.contains('telegram')) return Icons.chat;
+    if (lower.contains('facebook')) return Icons.facebook;
+    if (lower.contains('instagram')) return Icons.camera_alt;
+    if (lower.contains('chrome')) return Icons.language;
+    return Icons.apps;
   }
 }

@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:kloner/core/services/shizuku_service.dart';
 import 'package:kloner/features/app_cloner/domain/usecases/clone_app.dart';
 import 'package:kloner/features/app_cloner/domain/usecases/get_installed_apps.dart';
 import '../../../../core/di/injection_container.dart';
@@ -18,24 +19,19 @@ class HomePage extends StatelessWidget {
       create: (context) => AppClonerBloc(
         getInstalledApps: sl<GetInstalledApps>(),
         cloneApp: sl<CloneApp>(),
-      )..add(LoadApps()), // ✅ Auto-load apps
+      )..add(LoadApps()),
       child: BlocListener<AppClonerBloc, AppClonerState>(
         listener: (context, state) {
           if (state is AppClonerError) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.red,
-                duration: const Duration(seconds: 3),
-              ),
+              SnackBar(content: Text(state.message), backgroundColor: Colors.red),
             );
-          } else if (state is AppClonerLoaded && state.isCloning == false) {
+          } else if (state is AppClonerLoaded && !state.isCloning) {
             if (state.clonedApps.isNotEmpty) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('Cloned ${state.clonedApps.length} apps!'),
+                  content: Text('✅ Cloned ${state.clonedApps.length} apps!'),
                   backgroundColor: Colors.green,
-                  duration: const Duration(seconds: 2),
                 ),
               );
             }
@@ -57,9 +53,7 @@ class HomePage extends StatelessWidget {
           body: BlocBuilder<AppClonerBloc, AppClonerState>(
             builder: (context, state) {
               if (state is AppClonerLoading) {
-                return const Center(
-                  child: CircularProgressIndicator(),
-                );
+                return const Center(child: CircularProgressIndicator());
               }
 
               return RefreshIndicator(
@@ -70,8 +64,13 @@ class HomePage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // 🔥 SHIZUKU SETUP BANNER
+                      _buildShizukuBanner(context),
+                      SizedBox(height: 16.h),
+                      
                       const StatsCard(),
                       SizedBox(height: 20.h),
+                      
                       Text(
                         "Installed Apps",
                         style: TextStyle(
@@ -81,13 +80,94 @@ class HomePage extends StatelessWidget {
                         ),
                       ),
                       SizedBox(height: 12.h),
-                      const AppGrid(), // ✅ AppGrid can now safely use context.read<AppClonerBloc>()
+                      const AppGrid(),
                     ],
                   ),
                 ),
               );
             },
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildShizukuBanner(BuildContext context) {
+    return FutureBuilder<bool>(
+      future: ShizukuService.isReady(),
+      builder: (context, snapshot) {
+        final isReady = snapshot.data ?? false;
+        
+        return Container(
+          width: double.infinity,
+          padding: EdgeInsets.all(16.w),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: isReady 
+                  ? [Colors.green.shade400, Colors.green.shade600]
+                  : [Colors.orange.shade400, Colors.red.shade400],
+            ),
+            borderRadius: BorderRadius.circular(20.r),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                isReady ? Icons.security : Icons.security_update_warning,
+                color: Colors.white,
+                size: 24.sp,
+              ),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isReady ? '✅ Shizuku Ready!' : '🚀 Enable Real Cloning',
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    if (!isReady)
+                      Text(
+                        'Install Shizuku app for perfect clones',
+                        style: TextStyle(fontSize: 12.sp, color: Colors.white),
+                      ),
+                  ],
+                ),
+              ),
+              if (!isReady)
+                ElevatedButton(
+                  onPressed: () => _setupShizuku(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.orange.shade600,
+                  ),
+                  child: Text('Setup', style: TextStyle(fontSize: 12.sp)),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _setupShizuku(BuildContext context) async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '1. Install "Shizuku" from Play Store\n'
+          '2. Start Shizuku (Wireless debugging)\n'
+          '3. Tap "Setup" again',
+        ),
+        backgroundColor: Colors.orange,
+        duration: Duration(seconds: 5),
+        action: SnackBarAction(
+          label: 'Open Shizuku',
+          onPressed: () {
+            // TODO: Open Shizuku app
+          },
         ),
       ),
     );

@@ -17,10 +17,10 @@ class AppClonerLoading extends AppClonerState {
 
 class AppClonerLoaded extends AppClonerState {
   final List<AppEntity> apps;
-  final bool isCloning;                    // Global for StatsCard
-  final List<String> clonedApps;
-  final Map<String, bool> cloningApps;     // Per-app cloning state ✅ NEW
-  final String? error;                     // ✅ FIXED: Added error field
+  final bool isCloning;
+  final List<String> clonedApps;           // ✅ Package names only!
+  final Map<String, bool> cloningApps;
+  final String? error;
 
   const AppClonerLoaded({
     required this.apps,
@@ -42,7 +42,7 @@ class AppClonerLoaded extends AppClonerState {
       isCloning: isCloning ?? this.isCloning,
       clonedApps: clonedApps ?? this.clonedApps,
       cloningApps: cloningApps ?? this.cloningApps,
-      error: error ?? this.error,              // ✅ FIXED: Now works
+      error: error ?? this.error,
     );
   }
 
